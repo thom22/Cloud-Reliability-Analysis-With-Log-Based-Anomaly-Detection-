@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Reliability Monitor - GCP Anomaly Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Google Sans', 'Roboto', sans-serif;
+            background: #f8f9fa;
+            color: #202124;
+            overflow-x: hidden;
+        }
+        
+        /* GCP Style Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #dadce0;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .gcp-logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 500;
+            color: #5f6368;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(45deg, #4285f4, #34a853, #fbbc04, #ea4335);
+            border-radius: 50%;
+        }
+        
+        .project-selector {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .status-indicators {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-dot.healthy {
+            background: #34a853;
+        }
+        
+        .status-dot.warning {
+            background: #fbbc04;
+        }
+        
+        .status-dot.critical {
+            background: #ea4335;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* Main Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            height: calc(100vh - 65px);
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: white;
+            border-right: 1px solid #dadce0;
+            padding: 20px 0;
+        }
+        
+        .sidebar-item {
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .sidebar-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .sidebar-item.active {
+            background: #e8f0fe;
+            color: #1967d2;
+            border-left: 3px solid #1967d2;
+        }
+        
+        .sidebar-icon {
+            width: 20px;
+            height: 20px;
+            opacity: 0.7;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 24px;
+            overflow-y: auto;
+        }
+        
+        /* Metrics Cards */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .metric-card {
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .metric-label {
+            color: #5f6368;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            font-size: 32px;
+            font-weight: 500;
+            color: #202124;
+            margin-bottom: 8px;
+        }
+        
+        .metric-change {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .metric-change.positive {
+            color: #34a853;
+        }
+        
+        .metric-change.negative {
+            color: #ea4335;
+        }
+        
+        /* Real-time Log Stream */
+        .log-stream-container {
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        
+        .log-stream-header {
+            background: #f8f9fa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #dadce0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .log-stream-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .log-controls {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .log-control-btn {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .log-control-btn:hover {
+            background: #f8f9fa;
+        }
+        
+        .log-control-btn.active {
+            background: #1967d2;
+            color: white;
+            border-color: #1967d2;
+        }
+        
+        .log-stream {
+            height: 300px;
+            overflow-y: auto;
+            padding: 16px 20px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 12px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        
+        .log-entry {
+            padding: 4px 0;
+            display: flex;
+            align-items: start;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .log-timestamp {
+            color: #608b4e;
+            min-width: 140px;
+        }
+        
+        .log-level {
+            min-width: 60px;
+            font-weight: 600;
+        }
+        
+        .log-level.INFO {
+            color: #4fc1ff;
+        }
+        
+        .log-level.WARNING {
+            color: #fbbc04;
+        }
+        
+        .log-level.ERROR {
+            color: #f44336;
+        }
+        
+        .log-level.ANOMALY {
+            color: #ff00ff;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.5; }
+        }
+        
+        .log-message {
+            flex: 1;
+            color: #d4d4d4;
+        }
+        
+        .log-block-id {
+            color: #dcdcaa;
+        }
+        
+        /* Anomaly Detection Panel */
+        .detection-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .chart-container {
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .time-range-selector {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .time-btn {
+            padding: 4px 12px;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .time-btn.active {
+            background: #e8f0fe;
+            color: #1967d2;
+            border-color: #1967d2;
+        }
+        
+        .chart-area {
+            height: 250px;
+            position: relative;
+            background: linear-gradient(to bottom, #f8f9fa 0%, transparent 100%);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .chart-line {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 60%;
+            background: linear-gradient(to top, rgba(26, 115, 232, 0.1), rgba(26, 115, 232, 0));
+            border-top: 2px solid #1a73e8;
+        }
+        
+        /* Anomaly List */
+        .anomaly-list {
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .anomaly-list-header {
+            background: #fee;
+            padding: 16px 20px;
+            border-bottom: 1px solid #fcc;
+        }
+        
+        .anomaly-list-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #c5221f;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .anomaly-count {
+            background: #ea4335;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .anomaly-items {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        .anomaly-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f8f9fa;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .anomaly-item:hover {
+            background: #fef7f7;
+        }
+        
+        .anomaly-time {
+            font-size: 11px;
+            color: #5f6368;
+            margin-bottom: 4px;
+        }
+        
+        .anomaly-block {
+            font-size: 12px;
+            font-weight: 500;
+            color: #202124;
+            margin-bottom: 4px;
+        }
+        
+        .anomaly-type {
+            font-size: 11px;
+            color: #ea4335;
+        }
+        
+        /* Model Performance */
+        .performance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        
+        .performance-card {
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .performance-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .performance-label {
+            color: #5f6368;
+            font-size: 14px;
+        }
+        
+        .performance-value {
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #1a73e8, #34a853);
+            transition: width 0.5s ease;
+        }
+        
+        /* Alert Modal */
+        .alert-modal {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid #ea4335;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 400px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            animation: slideDown 0.3s ease-out;
+            z-index: 1000;
+        }
+        
+        .alert-modal.show {
+            display: block;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .alert-icon {
+            width: 24px;
+            height: 24px;
+            background: #ea4335;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .alert-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #c5221f;
+        }
+        
+        .alert-message {
+            color: #5f6368;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .alert-details {
+            background: #fef7f7;
+            border: 1px solid #fcc;
+            border-radius: 4px;
+            padding: 12px;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .alert-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .alert-btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .alert-btn.dismiss {
+            background: #f8f9fa;
+            color: #5f6368;
+        }
+        
+        .alert-btn.investigate {
+            background: #ea4335;
+            color: white;
+        }
+        
+        /* Loading Animation */
+        .loading-bar {
+            position: fixed;
+            top: 65px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, #4285f4, #34a853, #fbbc04, #ea4335);
+            animation: loading 2s linear infinite;
+            z-index: 999;
+        }
+        
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="gcp-logo">
+                <div class="logo-icon"></div>
+                <span>Cloud Reliability Monitor</span>
+            </div>
+            <div class="project-selector">
+                Project: hdfs-anomaly-detection
+            </div>
+        </div>
+        <div class="status-indicators">
+            <div class="status-item">
+                <div class="status-dot healthy"></div>
+                <span>Pub/Sub: Connected</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot healthy"></div>
+                <span>BigQuery: Active</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot warning"></div>
+                <span>ML Model: Processing</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Bar -->
+    <div class="loading-bar"></div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-item active">
+                <span class="sidebar-icon">📊</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-icon">📝</span>
+                <span>Log Stream</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-icon">⚠️</span>
+                <span>Anomalies</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-icon">🤖</span>
+                <span>ML Model</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-icon">📈</span>
+                <span>Analytics</span>
+            </div>
+            <div class="sidebar-item">
+                <span class="sidebar-icon">⚙️</span>
+                <span>Settings</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Metrics Cards -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Total Blocks Processed</div>
+                    <div class="metric-value" id="totalBlocks">547,832</div>
+                    <div class="metric-change positive">
+                        <span>↑</span>
+                        <span>12% from last hour</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Anomalies Detected</div>
+                    <div class="metric-value" id="anomalyCount">23</div>
+                    <div class="metric-change negative">
+                        <span>↑</span>
+                        <span>35% from baseline</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Mean Time to Detect</div>
+                    <div class="metric-value">1.2s</div>
+                    <div class="metric-change positive">
+                        <span>↓</span>
+                        <span>15% improvement</span>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Model Accuracy</div>
+                    <div class="metric-value">98.7%</div>
+                    <div class="metric-change positive">
+                        <span>↑</span>
+                        <span>0.3% from last week</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Log Stream -->
+            <div class="log-stream-container">
+                <div class="log-stream-header">
+                    <div class="log-stream-title">Real-time HDFS Log Stream</div>
+                    <div class="log-controls">
+                        <button class="log-control-btn active" id="pauseBtn">⏸ Pause</button>
+                        <button class="log-control-btn">🔍 Filter</button>
+                        <button class="log-control-btn">💾 Export</button>
+                    </div>
+                </div>
+                <div class="log-stream" id="logStream">
+                    <!-- Logs will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Detection Grid -->
+            <div class="detection-grid">
+                <!-- Anomaly Detection Chart -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Anomaly Detection Rate (Real-time)</div>
+                        <div class="time-range-selector">
+                            <button class="time-btn">1H</button>
+                            <button class="time-btn active">6H</button>
+                            <button class="time-btn">24H</button>
+                            <button class="time-btn">7D</button>
+                        </div>
+                    </div>
+                    <div class="chart-area">
+                        <canvas id="anomalyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Anomalies -->
+                <div class="anomaly-list">
+                    <div class="anomaly-list-header">
+                        <div class="anomaly-list-title">
+                            <span>⚠️ Recent Anomalies</span>
+                            <span class="anomaly-count" id="recentAnomalyCount">5</span>
+                        </div>
+                    </div>
+                    <div class="anomaly-items" id="anomalyList">
+                        <!-- Anomalies will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Performance -->
+            <div class="performance-grid">
+                <div class="performance-card">
+                    <div class="chart-title">Model Performance Metrics</div>
+                    <div class="performance-metric">
+                        <span class="performance-label">Precision</span>
+                        <span class="performance-value">96.8%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 96.8%"></div>
+                    </div>
+                    <div class="performance-metric">
+                        <span class="performance-label">Recall</span>
+                        <span class="performance-value">94.2%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 94.2%"></div>
+                    </div>
+                    <div class="performance-metric">
+                        <span class="performance-label">F1-Score</span>
+                        <span class="performance-value">95.5%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 95.5%"></div>
+                    </div>
+                </div>
+
+                <div class="performance-card">
+                    <div class="chart-title">Event Pattern Distribution</div>
+                    <canvas id="eventChart"></canvas>
+                </div>
+
+                <div class="performance-card">
+                    <div class="chart-title">Processing Pipeline Status</div>
+                    <div class="performance-metric">
+                        <span class="performance-label">Pub/Sub Messages</span>
+                        <span class="performance-value">1,247/min</span>
+                    </div>
+                    <div class="performance-metric">
+                        <span class="performance-label">BigQuery Inserts</span>
+                        <span class="performance-value">1,189/min</span>
+                    </div>
+                    <div class="performance-metric">
+                        <span class="performance-label">ML Predictions</span>
+                        <span class="performance-value">1,189/min</span>
+                    </div>
+                    <div class="performance-metric">
+                        <span class="performance-label">Latency (P99)</span>
+                        <span class="performance-value">847ms</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomaly Alert Modal -->
+    <div class="alert-modal" id="alertModal">
+        <div class="alert-header">
+            <div class="alert-icon">!</div>
+            <div class="alert-title">Critical Anomaly Detected</div>
+        </div>
+        <div class="alert-message">
+            Unusual event pattern detected in HDFS block processing
+        </div>
+        <div class="alert-details" id="alertDetails">
+            Block ID: <span id="alertBlockId">blk_1234567890</span><br>
+            Event Sequence: E7 → E14 → E10 (Critical failure pattern)<br>
+            Confidence: 98.5%<br>
+            Timestamp: <span id="alertTime">2025-11-06 14:23:45</span>
+        </div>
+        <div class="alert-actions">
+            <button class="alert-btn dismiss" onclick="dismissAlert()">Dismiss</button>
+            <button class="alert-btn investigate">Investigate</button>
+        </div>
+    </div>
+
+    <script>
+        // Simulated log entries
+        const logTemplates = [
+            { level: 'INFO', message: 'Receiving block {blockId} src: /10.0.1.2:50010 dest: /10.0.1.3:50010' },
+            { level: 'INFO', message: 'Served block {blockId} to /10.0.1.4' },
+            { level: 'INFO', message: 'PacketResponder for block {blockId} terminating' },
+            { level: 'WARNING', message: 'Verification failed for {blockId}' },
+            { level: 'ERROR', message: 'Exception writing block {blockId} to mirror' },
+            { level: 'INFO', message: 'BLOCK* NameSystem.allocateBlock: {blockId}' },
+            { level: 'INFO', message: 'Transmitted block {blockId} successfully' }
+        ];
+
+        const anomalyPatterns = [
+            { level: 'ANOMALY', message: 'DETECTED: Unusual sequence E7→E14→E10 for block {blockId}' },
+            { level: 'ANOMALY', message: 'DETECTED: High latency pattern for block {blockId}' },
+            { level: 'ANOMALY', message: 'DETECTED: Missing replication for block {blockId}' }
+        ];
+
+        let logCounter = 0;
+        let blockCounter = 1000000000;
+        let anomalyCounter = 23;
+        let isPaused = false;
+        let totalBlocks = 547832;
+
+        // Generate block ID
+        function generateBlockId() {
+            return `blk_-${blockCounter++}${Math.floor(Math.random() * 1000)}`;
+        }
+
+        // Format timestamp
+        function getTimestamp() {
+            const now = new Date();
+            return now.toISOString().replace('T', ' ').substr(0, 19);
+        }
+
+        // Add log entry
+        function addLogEntry(isAnomaly = false) {
+            const logStream = document.getElementById('logStream');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const blockId = generateBlockId();
+            const template = isAnomaly ? 
+                anomalyPatterns[Math.floor(Math.random() * anomalyPatterns.length)] :
+                logTemplates[Math.floor(Math.random() * logTemplates.length)];
+            
+            const message = template.message.replace('{blockId}', `<span class="log-block-id">${blockId}</span>`);
+            
+            entry.innerHTML = `
+                <span class="log-timestamp">${getTimestamp()}</span>
+                <span class="log-level ${template.level}">${template.level}</span>
+                <span class="log-message">${message}</span>
+            `;
+            
+            logStream.insertBefore(entry, logStream.firstChild);
+            
+            // Keep only last 50 entries
+            while (logStream.children.length > 50) {
+                logStream.removeChild(logStream.lastChild);
+            }
+            
+            // Update metrics
+            totalBlocks++;
+            document.getElementById('totalBlocks').textContent = totalBlocks.toLocaleString();
+            
+            // Handle anomaly
+            if (isAnomaly) {
+                anomalyCounter++;
+                document.getElementById('anomalyCount').textContent = anomalyCounter;
+                addAnomalyToList(blockId);
+                
+                // Show alert for critical anomalies (30% chance)
+                if (Math.random() < 0.3) {
+                    showAnomalyAlert(blockId);
+                }
+            }
+        }
+
+        // Add anomaly to list
+        function addAnomalyToList(blockId) {
+            const anomalyList = document.getElementById('anomalyList');
+            const item = document.createElement('div');
+            item.className = 'anomaly-item';
+            
+            const anomalyTypes = ['Pattern E7→E14→E10', 'High Latency', 'Missing Replication', 'Unexpected Termination'];
+            const type = anomalyTypes[Math.floor(Math.random() * anomalyTypes.length)];
+            
+            item.innerHTML = `
+                <div class="anomaly-time">${getTimestamp()}</div>
+                <div class="anomaly-block">${blockId}</div>
+                <div class="anomaly-type">${type}</div>
+            `;
+            
+            anomalyList.insertBefore(item, anomalyList.firstChild);
+            
+            // Keep only last 10 anomalies
+            while (anomalyList.children.length > 10) {
+                anomalyList.removeChild(anomalyList.lastChild);
+            }
+            
+            // Update count
+            const count = Math.min(anomalyList.children.length, 10);
+            document.getElementById('recentAnomalyCount').textContent = count;
+        }
+
+        // Show anomaly alert
+        function showAnomalyAlert(blockId) {
+            const modal = document.getElementById('alertModal');
+            document.getElementById('alertBlockId').textContent = blockId;
+            document.getElementById('alertTime').textContent = getTimestamp();
+            modal.classList.add('show');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                if (modal.classList.contains('show')) {
+                    dismissAlert();
+                }
+            }, 5000);
+        }
+
+        // Dismiss alert
+        function dismissAlert() {
+            document.getElementById('alertModal').classList.remove('show');
+        }
+
+        // Toggle pause
+        document.getElementById('pauseBtn').addEventListener('click', function() {
+            isPaused = !isPaused;
+            this.textContent = isPaused ? '▶ Resume' : '⏸ Pause';
+            this.classList.toggle('active');
+        });
+
+        // Simulate log streaming
+        function streamLogs() {
+            if (!isPaused) {
+                // 10% chance of anomaly
+                const isAnomaly = Math.random() < 0.1;
+                addLogEntry(isAnomaly);
+            }
+        }
+
+        // Initialize chart data
+        const chartData = {
+            timestamps: [],
+            normal: [],
+            anomaly: []
+        };
+
+        // Update chart data
+        function updateChart() {
+            const now = new Date();
+            chartData.timestamps.push(now);
+            
+            // Keep last 60 data points
+            if (chartData.timestamps.length > 60) {
+                chartData.timestamps.shift();
+                chartData.normal.shift();
+                chartData.anomaly.shift();
+            }
+            
+            // Add random data
+            chartData.normal.push(Math.floor(Math.random() * 50) + 150);
+            chartData.anomaly.push(Math.floor(Math.random() * 5) + (Math.random() < 0.3 ? 8 : 2));
+            
+            drawChart();
+        }
+
+        // Draw chart (simplified visualization)
+        function drawChart() {
+            const canvas = document.getElementById('anomalyChart');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                const width = canvas.parentElement.offsetWidth;
+                const height = 250;
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw grid lines
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, (height / 5) * i);
+                    ctx.lineTo(width, (height / 5) * i);
+                    ctx.stroke();
+                }
+                
+                // Draw normal line
+                ctx.strokeStyle = '#34a853';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                chartData.normal.forEach((value, index) => {
+                    const x = (width / 60) * index;
+                    const y = height - (value / 200) * height;
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+                
+                // Draw anomaly line
+                ctx.strokeStyle = '#ea4335';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                chartData.anomaly.forEach((value, index) => {
+                    const x = (width / 60) * index;
+                    const y = height - (value / 20) * height;
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+                
+                // Draw anomaly points
+                ctx.fillStyle = '#ea4335';
+                chartData.anomaly.forEach((value, index) => {
+                    if (value > 5) {
+                        const x = (width / 60) * index;
+                        const y = height - (value / 20) * height;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                });
+            }
+        }
+
+        // Draw event distribution chart
+        function drawEventChart() {
+            const canvas = document.getElementById('eventChart');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                const width = canvas.parentElement.offsetWidth - 40;
+                const height = 200;
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Event data
+                const events = ['E3', 'E5', 'E22', 'E26', 'E7', 'E14', 'E10', 'E23'];
+                const values = [203, 156, 89, 76, 45, 32, 28, 21];
+                const maxValue = Math.max(...values);
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw bars
+                const barWidth = width / events.length * 0.7;
+                const spacing = width / events.length * 0.3;
+                
+                events.forEach((event, index) => {
+                    const x = index * (barWidth + spacing) + spacing / 2;
+                    const barHeight = (values[index] / maxValue) * (height - 30);
+                    const y = height - barHeight - 20;
+                    
+                    // Gradient fill
+                    const gradient = ctx.createLinearGradient(0, y, 0, height - 20);
+                    gradient.addColorStop(0, '#4285f4');
+                    gradient.addColorStop(1, '#1a73e8');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(x, y, barWidth, barHeight);
+                    
+                    // Event label
+                    ctx.fillStyle = '#5f6368';
+                    ctx.font = '11px Roboto';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(event, x + barWidth / 2, height - 5);
+                    
+                    // Value label
+                    ctx.fillStyle = '#202124';
+                    ctx.font = '10px Roboto';
+                    ctx.fillText(values[index], x + barWidth / 2, y - 5);
+                });
+            }
+        }
+
+        // Initialize dashboard
+        function initDashboard() {
+            // Start log streaming
+            setInterval(streamLogs, Math.random() * 500 + 200);
+            
+            // Update chart
+            setInterval(updateChart, 1000);
+            
+            // Initial chart draw
+            drawChart();
+            drawEventChart();
+            
+            // Add initial logs
+            for (let i = 0; i < 10; i++) {
+                addLogEntry(false);
+            }
+            
+            // Add initial anomalies
+            for (let i = 0; i < 3; i++) {
+                addAnomalyToList(generateBlockId());
+            }
+        }
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            drawChart();
+            drawEventChart();
+        });
+
+        // Start dashboard when page loads
+        window.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>
