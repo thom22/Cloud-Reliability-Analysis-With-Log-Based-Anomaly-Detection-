@@ -90,7 +90,7 @@ The enhanced DeepLog LSTM model:
 cd deeplog_model
 
 # Train the model
-python deeplog_model.py
+python enhanced_deeplog.py.py
 
 # This will generate:
 # - deeplog_best_model.h5 (trained model)
@@ -98,17 +98,13 @@ python deeplog_model.py
 # - deeplog_evaluation.png (performance visualization)
 
 # Create deployment files for the dashboard
-python save_deployment.py
+python save_deploy.py
 
 # This creates:
 # - event_to_id.pkl (event encoding mapping)
 # - count_scaler.pkl (feature scaler)
 # - feature_names.pkl (feature reference)
 ```
-
-**Model Architecture:**
-- Dual-input LSTM architecture (sequences + count features)
-- Bidirectional LSTM layers for temporal pattern learning
 
 ### 5. Dashboard
 
