@@ -2,6 +2,9 @@
 
  
 This project focus on Cloud Reliability Analysis with Log-Based Anomaly Detection, to improve cloud system reliability by automatically detecting abnormal patterns in system logs using AI and machine learning techniques. The work builds upon the use of large-scale distributed system logs, specifically the HDFS dataset from LogHub, to identify anomalies that may indicate system faults or performance degradation. The project combines data preprocessing, feature engineering, and both supervised and unsupervised modeling approaches to detect unusual behaviors within system components. It also includes a prototype monitoring dashboard built  to visualize the analysis and prediction results. The end goal is to demonstrate how AI-based anomaly detection can enhance reliability monitoring and operational visibility in modern cloud environments.
+
+
+**Overview of the designed approach and workflow** 
 <img width="1023" height="229" alt="image" src="https://github.com/user-attachments/assets/68a3110f-d77a-473d-be6c-391d2a0d58fc" />
 
 ## Live Dashboard
