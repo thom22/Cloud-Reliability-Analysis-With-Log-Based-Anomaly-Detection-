@@ -87,7 +87,7 @@ The enhanced DeepLog LSTM model:
 cd deeplog_model
 
 # Train the model
-python deeplog_training.py
+python deeplog_model.py
 
 # This will generate:
 # - deeplog_best_model.h5 (trained model)
@@ -95,7 +95,7 @@ python deeplog_training.py
 # - deeplog_evaluation.png (performance visualization)
 
 # Create deployment files for the dashboard
-python save_deployment_files.py
+python save_deployment.py
 
 # This creates:
 # - event_to_id.pkl (event encoding mapping)
@@ -123,7 +123,7 @@ Visit the live dashboard: **[Log Anomaly Detection Dashboard](https://cloud-comp
 cd app2
 streamlit run dashboard.py
 ```
-<img width="468" height="262" alt="image" src="https://github.com/user-attachments/assets/66d11b95-8eba-42be-b1c9-836f0bd169b4" />
+<img width="1637" height="883" alt="Screenshot 2025-12-16 at 3 45 26 AM" src="https://github.com/user-attachments/assets/5006e79b-3fa9-4d37-aac4-dfa5fb86bed2" />
 
 #### Option C: React Based Dashboard (Experimental)
 
